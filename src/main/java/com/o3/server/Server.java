@@ -2,24 +2,22 @@ package com.o3.server;
 
 import com.sun.net.httpserver.*;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
+import javax.net.ssl.*;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.stream.Collectors;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.TrustManagerFactory;
+import java.util.ArrayList;
+import java.util.List;
+
+import org.json.JSONObject;
+import org.json.JSONArray;
+
 
 public class Server implements HttpHandler {
     
-    StringBuilder textDump = new StringBuilder();
+    private List<ObservationRecord> observationRecords = new ArrayList<>();
 
     private Server() {
     }
@@ -48,13 +46,22 @@ public class Server implements HttpHandler {
 
 
     private void handleGetRequest(HttpExchange httpExchange) throws IOException {
-        String responseString = "No messages";
-        if (textDump.toString().length() != 0) {
-            responseString = textDump.toString();
+        if (observationRecords.isEmpty()) {
+            httpExchange.sendResponseHeaders(204, -1);
+            return;
         }
 
+        JSONArray responseArray = new JSONArray();
+        for (ObservationRecord record : observationRecords) {
+            responseArray.put(record.toJSON());
+        }
+
+        String responseString = responseArray.toString();
         byte[] bytes = responseString.getBytes("UTF-8");
+
+        httpExchange.getResponseHeaders().set("Content-Type", "application/json");
         httpExchange.sendResponseHeaders(200, bytes.length);
+
         OutputStream outputStream = httpExchange.getResponseBody();
         outputStream.write(responseString.getBytes());
         outputStream.flush();
@@ -62,17 +69,27 @@ public class Server implements HttpHandler {
     }
 
     private void handlePostRequest(HttpExchange httpExchange) throws IOException {
-        InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),StandardCharsets.UTF_8);
-        BufferedReader br = new BufferedReader(isr);
-        
-        String text = br.lines().collect(Collectors.joining("\n"));
-        textDump.append(text);
-        
-        br.close();
-        isr.close();
-        
-        httpExchange.getResponseHeaders();
-        httpExchange.sendResponseHeaders(200, -1);
+        try {
+            InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String text = br.lines().collect(Collectors.joining("\n"));
+            
+            JSONObject json = new JSONObject(text);
+            
+            if (!json.has("orbital_elements") && !json.has("state_vector")) {
+                httpExchange.sendResponseHeaders(400, -1);
+                httpExchange.getResponseBody().close();
+                return;
+            }
+
+            observationRecords.add(new ObservationRecord(json));
+            httpExchange.sendResponseHeaders(200, -1);
+            httpExchange.getResponseBody().close();
+
+        } catch (Exception e) {
+            httpExchange.sendResponseHeaders(400, -1);
+            httpExchange.getResponseBody().close();
+        }
 
     }
 

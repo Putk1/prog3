@@ -5,30 +5,26 @@ import java.util.Map;
 
 public class UserAuthenticator extends com.sun.net.httpserver.BasicAuthenticator {
     
-    private Map<String,String> users = null;
+    private Map<String, User> users = new Hashtable<>();
     
     public UserAuthenticator(String realm) {
         super("datarecord");
-        users = new Hashtable<String,String>();
-        users.put("dummy", "passwd"); 
     }
 
     @Override
     public boolean checkCredentials(String username, String password) {
-        String storedPassword = users.get(username);
-
-        if (storedPassword != null && storedPassword.equals(password)) {
+        User user = users.get(username);
+        if (user != null && user.getPassword().equals(password)) {
             return true;
         }
-
         return false;
     }
 
-    public boolean addUser(String userName, String password) {
-        if (users.containsKey(userName)) {
+    public boolean addUser(User user) {
+        if (users.containsKey(user.getUsername())) {
             return false;
         }
-        users.put(userName, password);
+        users.put(user.getUsername(), user);
         return true;
     }
 }

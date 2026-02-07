@@ -3,6 +3,9 @@ package com.o3.server;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
+import org.json.JSONObject;
+import org.json.JSONException;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -32,39 +35,45 @@ public class RegistrationHandler implements HttpHandler {
     }
 
     private void handlePostRequest(HttpExchange t) throws IOException {
-        InputStreamReader isr = new InputStreamReader(t.getRequestBody(), StandardCharsets.UTF_8);
-        BufferedReader br = new BufferedReader(isr);
-        String body = br.lines().collect(Collectors.joining("\n"));
-        br.close();
+        try {
+            InputStreamReader isr = new InputStreamReader(t.getRequestBody(), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String body = br.lines().collect(Collectors.joining("\n"));
+            br.close();
 
-        String[] parts = body.split(":");
+            JSONObject json = new JSONObject(body);
 
-        if (parts.length != 2) {
-            String response = "Invalid format. Use username:password";
+            User newUser = new User(
+                json.getString("username"),
+                json.getString("password"),
+                json.getString("email")
+            );
+
+            boolean success = auth.addUser(newUser);
+
+            if (success) {
+                String response = "User registration successful";
+                t.getResponseHeaders().set("Content-Type", "application/json");
+                t.sendResponseHeaders(200, response.length());
+                OutputStream os = t.getResponseBody();
+                os.write(response.getBytes());
+                os.close();
+            } else {
+                String response = "User already registered";
+                t.getResponseHeaders().set("Content-Type", "application/json");
+                t.sendResponseHeaders(403, response.length());
+                OutputStream os = t.getResponseBody();
+                os.write(response.getBytes());
+                os.close();
+            }
+
+        } catch (JSONException e) {
+            String response = "Invalid JSON format";
+            t.getResponseHeaders().set("Content-Type", "application/json");
             t.sendResponseHeaders(400, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-            return;
+            try (OutputStream os = t.getResponseBody()) {
+                os.write(response.getBytes());
+            }
         }
-
-        String username = parts[0];
-        String password = parts[1];
-
-        boolean success = auth.addUser(username, password);
-
-        if (success) {
-            String response = "User registration successful";
-            t.sendResponseHeaders(200, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-        } else {
-            String response = "User already registered";
-            t.sendResponseHeaders(403, response.length());
-            OutputStream os = t.getResponseBody();
-            os.write(response.getBytes());
-            os.close();
-        }
-    }
+}
 }
