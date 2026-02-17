@@ -8,7 +8,6 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.util.stream.Collectors;
-import java.util.ArrayList;
 import java.util.List;
 
 import org.json.JSONObject;
@@ -16,8 +15,6 @@ import org.json.JSONArray;
 
 
 public class Server implements HttpHandler {
-    
-    private List<ObservationRecord> observationRecords = new ArrayList<>();
 
     private Server() {
     }
@@ -46,48 +43,57 @@ public class Server implements HttpHandler {
 
 
     private void handleGetRequest(HttpExchange httpExchange) throws IOException {
-        if (observationRecords.isEmpty()) {
-            httpExchange.sendResponseHeaders(204, -1);
-            return;
+        try {
+            List<ObservationRecord> records = MessageDatabase.getInstance().getMessages();
+
+            if (records.isEmpty()) {
+                httpExchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            JSONArray responseArray = new JSONArray();
+            for (ObservationRecord record : records) {
+                responseArray.put(record.toJSON());
+            }
+
+            String responseString = responseArray.toString();
+            byte[] bytes = responseString.getBytes("UTF-8");
+
+            httpExchange.getResponseHeaders().set("Content-Type", "application/json");
+            httpExchange.sendResponseHeaders(200, bytes.length);
+            
+            OutputStream outputStream = httpExchange.getResponseBody();
+            outputStream.write(responseString.getBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (Exception e) {
+            httpExchange.sendResponseHeaders(500, -1);
         }
-
-        JSONArray responseArray = new JSONArray();
-        for (ObservationRecord record : observationRecords) {
-            responseArray.put(record.toJSON());
-        }
-
-        String responseString = responseArray.toString();
-        byte[] bytes = responseString.getBytes("UTF-8");
-
-        httpExchange.getResponseHeaders().set("Content-Type", "application/json");
-        httpExchange.sendResponseHeaders(200, bytes.length);
-
-        OutputStream outputStream = httpExchange.getResponseBody();
-        outputStream.write(responseString.getBytes());
-        outputStream.flush();
-        outputStream.close();
     }
 
     private void handlePostRequest(HttpExchange httpExchange) throws IOException {
         try {
+            String timestamp = java.time.ZonedDateTime.now(java.time.ZoneId.of("UTC"))
+                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"));
+            long epochMilli = java.time.Instant.now().toEpochMilli();
+
+            String username = httpExchange.getPrincipal().getUsername();
+            User user = MessageDatabase.getInstance().getUser(username);
+            String nickname = user.getNickname();
+
             InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),StandardCharsets.UTF_8);
             BufferedReader br = new BufferedReader(isr);
             String text = br.lines().collect(Collectors.joining("\n"));
             
             JSONObject json = new JSONObject(text);
             
-            if (!json.has("orbital_elements") && !json.has("state_vector")) {
-                httpExchange.sendResponseHeaders(400, -1);
-                httpExchange.getResponseBody().close();
-                return;
-            }
+            MessageDatabase.getInstance().storeMessage(nickname, epochMilli, text);
 
-            observationRecords.add(new ObservationRecord(json));
             httpExchange.sendResponseHeaders(200, -1);
-            httpExchange.getResponseBody().close();
 
         } catch (Exception e) {
             httpExchange.sendResponseHeaders(400, -1);
+        } finally {
             httpExchange.getResponseBody().close();
         }
 
@@ -111,6 +117,12 @@ public class Server implements HttpHandler {
     }
 
     public static void main(String[] args) throws Exception {
+        String dbPath = System.getenv("DATABASE_PATH");
+        if (dbPath == null || dbPath.isEmpty()) {
+            System.err.println("DATABASE_PATH not set");
+            return;
+        }
+        MessageDatabase.getInstance().open(dbPath);
         try {
             HttpsServer server = HttpsServer.create(new InetSocketAddress(8001),0);
 

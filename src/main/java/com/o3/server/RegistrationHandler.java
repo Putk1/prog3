@@ -46,7 +46,8 @@ public class RegistrationHandler implements HttpHandler {
             User newUser = new User(
                 json.getString("username"),
                 json.getString("password"),
-                json.getString("email")
+                json.getString("email"),
+                json.getString("nickname")
             );
 
             boolean success = auth.addUser(newUser);
@@ -75,5 +76,5 @@ public class RegistrationHandler implements HttpHandler {
                 os.write(response.getBytes());
             }
         }
-}
+    }
 }
