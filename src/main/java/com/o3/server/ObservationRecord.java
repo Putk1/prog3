@@ -22,10 +22,16 @@ public class ObservationRecord {
         this.centerBodyName = json.getString("center_body_name");
         this.epoch = json.getString("epoch");
         
-        this.recordPayload = json.toString();
         this.recordOwner = nickname;
         this.id = id;
         this.recordTimeReceived = timestamp;
+
+        if (json.has("metadata")) {
+            JSONObject clientMetadata = json.getJSONObject("metadata");
+            if (clientMetadata.has("record_payload")) {
+                this.recordPayload = clientMetadata.getString("record_payload");
+            }
+        }
 
         if (json.has("orbital_elements")) {
             JSONObject orb_elements = json.getJSONObject("orbital_elements");
@@ -78,7 +84,9 @@ public class ObservationRecord {
         metadata.put("record_time_received", recordTimeReceived);
         metadata.put("record_owner", recordOwner);
         metadata.put("id", id);
-        metadata.put("record_payload", recordPayload);
+        if (recordPayload != null) {
+            metadata.put("record_payload", recordPayload);
+        }
         json.put("metadata", metadata);
 
         return json;

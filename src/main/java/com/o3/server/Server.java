@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 import java.util.List;
 
 import org.json.JSONArray;
+import org.json.JSONObject;
 
 
 public class Server implements HttpHandler {
@@ -82,6 +83,16 @@ public class Server implements HttpHandler {
             BufferedReader br = new BufferedReader(isr);
             String text = br.lines().collect(Collectors.joining("\n"));
             
+            JSONObject json = new JSONObject(text);
+
+            if (!json.has("orbital_elements") && !json.has("state_vector")) {
+                httpExchange.sendResponseHeaders(400, -1);
+                httpExchange.getResponseBody().close();
+                return;
+            }
+
+            new ObservationRecord(json, nickname, 0, "");
+
             MessageDatabase.getInstance().storeMessage(nickname, epochMilli, text);
 
             httpExchange.sendResponseHeaders(200, -1);
