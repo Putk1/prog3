@@ -5,7 +5,10 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import org.json.JSONObject;
-
+import java.time.ZonedDateTime;
+import java.time.ZoneId;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 public class MessageDatabase {
     private static MessageDatabase instance = null;
     private Connection connection = null;
@@ -82,10 +85,16 @@ public class MessageDatabase {
     public List<ObservationRecord> getMessages() throws SQLException {
         List<ObservationRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM messages";
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+
         try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 JSONObject payloadJson = new JSONObject(rs.getString("payload"));
-                String isoTime = java.time.Instant.ofEpochMilli(rs.getLong("time")).toString();
+
+                long epochMilli = rs.getLong("time");
+                ZonedDateTime utcTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.of("UTC"));
+                String isoTime = utcTime.format(formatter);
 
                 records.add(new ObservationRecord(
                     payloadJson,

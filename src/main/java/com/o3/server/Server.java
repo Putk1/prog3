@@ -10,7 +10,6 @@ import java.security.KeyStore;
 import java.util.stream.Collectors;
 import java.util.List;
 
-import org.json.JSONObject;
 import org.json.JSONArray;
 
 
@@ -73,8 +72,6 @@ public class Server implements HttpHandler {
 
     private void handlePostRequest(HttpExchange httpExchange) throws IOException {
         try {
-            String timestamp = java.time.ZonedDateTime.now(java.time.ZoneId.of("UTC"))
-                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"));
             long epochMilli = java.time.Instant.now().toEpochMilli();
 
             String username = httpExchange.getPrincipal().getUsername();
@@ -84,8 +81,6 @@ public class Server implements HttpHandler {
             InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),StandardCharsets.UTF_8);
             BufferedReader br = new BufferedReader(isr);
             String text = br.lines().collect(Collectors.joining("\n"));
-            
-            JSONObject json = new JSONObject(text);
             
             MessageDatabase.getInstance().storeMessage(nickname, epochMilli, text);
 
