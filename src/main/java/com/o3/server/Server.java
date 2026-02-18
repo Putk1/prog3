@@ -13,6 +13,7 @@ import java.util.List;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.util.concurrent.Executors;
 
 public class Server implements HttpHandler {
 
@@ -124,11 +125,14 @@ public class Server implements HttpHandler {
 
     public static void main(String[] args) throws Exception {
         String dbPath = System.getenv("DATABASE_PATH");
+        
         if (dbPath == null || dbPath.isEmpty()) {
             System.err.println("DATABASE_PATH not set");
             return;
         }
+
         MessageDatabase.getInstance().open(dbPath);
+        
         try {
             HttpsServer server = HttpsServer.create(new InetSocketAddress(8001),0);
 
@@ -149,12 +153,22 @@ public class Server implements HttpHandler {
 
             server.createContext("/registration", new RegistrationHandler(auth));
 
-            server.setExecutor(null);
+            server.setExecutor(Executors.newCachedThreadPool());
+
             server.start();
             System.out.println("Server running on port 8001");
 
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                System.out.println("Shutting down server");
+                server.stop(0);
+                try {
+                    MessageDatabase.getInstance().closeDatabase();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }));
+
         } catch (FileNotFoundException e) {
-            // Certificate file not found!
             System.out.println("Certificate not found!");
             e.printStackTrace();
         } catch (Exception e) {

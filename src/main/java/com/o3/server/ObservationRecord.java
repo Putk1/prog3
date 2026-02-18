@@ -17,6 +17,8 @@ public class ObservationRecord {
     private long id;
     private String recordPayload;
 
+    private JSONArray observatory;
+
     public ObservationRecord(JSONObject json, String nickname, long id, String timestamp) {
         this.targetBodyName = json.getString("target_body_name");
         this.centerBodyName = json.getString("center_body_name");
@@ -28,8 +30,13 @@ public class ObservationRecord {
 
         if (json.has("metadata")) {
             JSONObject clientMetadata = json.getJSONObject("metadata");
+            
             if (clientMetadata.has("record_payload")) {
                 this.recordPayload = clientMetadata.getString("record_payload");
+            }
+            
+            if (clientMetadata.has("observatory")) {
+                this.observatory = clientMetadata.getJSONArray("observatory");
             }
         }
 
@@ -87,6 +94,11 @@ public class ObservationRecord {
         if (recordPayload != null) {
             metadata.put("record_payload", recordPayload);
         }
+
+        if (observatory != null) {
+            metadata.put("observatory", observatory);
+        }
+
         json.put("metadata", metadata);
 
         return json;

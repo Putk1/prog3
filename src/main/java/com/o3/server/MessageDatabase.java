@@ -9,9 +9,14 @@ import java.time.ZonedDateTime;
 import java.time.ZoneId;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+
+import org.apache.commons.codec.digest.Crypt;
+import java.security.SecureRandom;
 public class MessageDatabase {
     private static MessageDatabase instance = null;
     private Connection connection = null;
+
+    private SecureRandom secureRandom = new SecureRandom();
 
     private MessageDatabase() {}
 
@@ -27,6 +32,12 @@ public class MessageDatabase {
         boolean exists = new File(dbPath).exists();
         connection = DriverManager.getConnection(url);
         if (!exists) initializeDatabase();
+    }
+
+    public void closeDatabase() throws SQLException {
+        if (connection != null) {
+            connection.close();
+        }
     }
 
     private void initializeDatabase() throws SQLException {
@@ -51,7 +62,11 @@ public class MessageDatabase {
         String sql = "INSERT INTO users (username, password, email, nickname) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, user.getUsername());
-            pstmt.setString(2, user.getPassword());
+
+            // Hash the password and store the hashed password
+            String hashedPassword = Crypt.crypt(user.getPassword());
+            pstmt.setString(2, hashedPassword);
+
             pstmt.setString(3, user.getEmail());
             pstmt.setString(4, user.getNickname());
             pstmt.executeUpdate();
