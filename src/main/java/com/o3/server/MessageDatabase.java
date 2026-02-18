@@ -58,7 +58,7 @@ public class MessageDatabase {
         }
     }
 
-    public boolean registerUser(User user) throws SQLException {
+    public synchronized boolean registerUser(User user) throws SQLException {
         String sql = "INSERT INTO users (username, password, email, nickname) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, user.getUsername());
@@ -74,7 +74,7 @@ public class MessageDatabase {
         } catch (SQLException e) { return false; }
     }
 
-    public User getUser(String username) throws SQLException {
+    public synchronized User getUser(String username) throws SQLException {
         String sql = "SELECT * FROM users WHERE username = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, username);
@@ -87,7 +87,7 @@ public class MessageDatabase {
         return null;
     }
 
-    public void storeMessage(String ownerNickname, long time, String payload) throws SQLException {
+    public synchronized void storeMessage(String ownerNickname, long time, String payload) throws SQLException {
         String sql = "INSERT INTO messages (owner, time, payload) VALUES (?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, ownerNickname);
@@ -97,7 +97,7 @@ public class MessageDatabase {
         }
     }
 
-    public List<ObservationRecord> getMessages() throws SQLException {
+    public synchronized List<ObservationRecord> getMessages() throws SQLException {
         List<ObservationRecord> records = new ArrayList<>();
         String sql = "SELECT * FROM messages";
 

@@ -80,7 +80,7 @@ public class Server implements HttpHandler {
             User user = MessageDatabase.getInstance().getUser(username);
             String nickname = user.getNickname();
 
-            InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(),StandardCharsets.UTF_8);
+            InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(), StandardCharsets.UTF_8);
             BufferedReader br = new BufferedReader(isr);
             String text = br.lines().collect(Collectors.joining("\n"));
             
@@ -99,7 +99,10 @@ public class Server implements HttpHandler {
             httpExchange.sendResponseHeaders(200, -1);
 
         } catch (Exception e) {
-            httpExchange.sendResponseHeaders(400, -1);
+            String response = "Invalid request format";
+            byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+            httpExchange.sendResponseHeaders(400, responseBytes.length);
+            httpExchange.getResponseBody().write(responseBytes);
         } finally {
             httpExchange.getResponseBody().close();
         }
