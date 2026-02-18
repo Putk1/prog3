@@ -28,6 +28,8 @@ public class ObservationRecord {
         this.id = id;
         this.recordTimeReceived = timestamp;
 
+        this.recordPayload = "";
+
         if (json.has("metadata")) {
             JSONObject clientMetadata = json.getJSONObject("metadata");
             
@@ -37,6 +39,13 @@ public class ObservationRecord {
             
             if (clientMetadata.has("observatory")) {
                 this.observatory = clientMetadata.getJSONArray("observatory");
+
+                for (int i = 0; i < this.observatory.length(); i++) {
+                    JSONObject obs = this.observatory.getJSONObject(i);
+
+                    obs.getDouble("latitude");
+                    obs.getDouble("longitude");
+                }
             }
         }
 
