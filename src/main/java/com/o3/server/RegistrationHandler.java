@@ -43,10 +43,28 @@ public class RegistrationHandler implements HttpHandler {
 
             JSONObject json = new JSONObject(body);
 
+            String email = json.getString("email");
+            
+            // Email validation with regex
+            // 0. "^" = start of string
+            // 1. "[^@\\s]+" = all non-whitespace and @ symbols "summed together"
+            // 2. "@[^@\\s]" = one @ followed by same as 1.
+            // 3. "+\\.[^@\\s]+" = one dot followed by same as 1.
+            // 4. "$" = end of string
+
+            if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+                String response = "Invalid email";
+                t.sendResponseHeaders(400, response.length());
+                OutputStream os = t.getResponseBody();
+                os.write(response.getBytes());
+                os.close();
+                return;
+            }
+
             User newUser = new User(
                 json.getString("username"),
                 json.getString("password"),
-                json.getString("email"),
+                email,
                 json.getString("nickname")
             );
 

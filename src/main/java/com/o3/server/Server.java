@@ -96,7 +96,7 @@ public class Server implements HttpHandler {
 
             MessageDatabase.getInstance().storeMessage(nickname, epochMilli, text);
 
-            httpExchange.sendResponseHeaders(200, -1);
+            httpExchange.sendResponseHeaders(201, -1);
 
         } catch (Exception e) {
             String response = "Invalid request format";

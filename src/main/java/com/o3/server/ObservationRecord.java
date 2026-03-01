@@ -28,14 +28,13 @@ public class ObservationRecord {
         this.id = id;
         this.recordTimeReceived = timestamp;
 
-        this.recordPayload = "";
-
         if (json.has("metadata")) {
             JSONObject clientMetadata = json.getJSONObject("metadata");
             
-            if (clientMetadata.has("record_payload")) {
-                this.recordPayload = clientMetadata.getString("record_payload");
+            if (!clientMetadata.has("record_payload")) {
+                throw new JSONException("Missing field: record_payload");
             }
+            this.recordPayload = clientMetadata.getString("record_payload");
             
             if (clientMetadata.has("observatory")) {
                 this.observatory = clientMetadata.getJSONArray("observatory");
@@ -47,6 +46,8 @@ public class ObservationRecord {
                     obs.getDouble("longitude");
                 }
             }
+        } else {
+            throw new JSONException("Missing record_payload");
         }
 
         if (json.has("orbital_elements")) {

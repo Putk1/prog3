@@ -1,6 +1,7 @@
 # Programming 3 assignment
 
-Student Number: Y########
+Student Name: Petrus heikkilä
+Student Number: 2408094
 
 ## Introduction
 
