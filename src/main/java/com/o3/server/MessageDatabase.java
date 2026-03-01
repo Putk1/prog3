@@ -4,6 +4,8 @@ import java.sql.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.json.JSONArray;
 import org.json.JSONObject;
 import java.time.ZonedDateTime;
 import java.time.ZoneId;
@@ -55,7 +57,79 @@ public class MessageDatabase {
                 "owner TEXT, " +
                 "time INTEGER, " +
                 "payload TEXT)");
+            
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS collections (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT)");
+
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS collection_messages (" +
+                "collection_id INTEGER, " +
+                "message_id INTEGER, " +
+                "FOREIGN KEY(collection_id) REFERENCES collections(id), " +
+                "FOREIGN KEY(message_id) REFERENCES messages(id))");
         }
+    }
+
+    public synchronized long createCollection() throws SQLException {
+        String sql = "INSERT INTO collections DEFAULT VALUES";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.executeUpdate();
+            try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getLong(1);
+                }
+            }
+        }
+        return -1;
+    }
+
+    public synchronized void addMessagesToCollection(long collectionId, JSONArray messageIds) throws SQLException {
+        String sql = "INSERT INTO collection_messages (collection_id, message_id) VALUES (?, ?)";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            for (int i = 0; i < messageIds.length(); i++) {
+                pstmt.setLong(1, collectionId);
+                pstmt.setLong(2, messageIds.getLong(i));
+                pstmt.addBatch();
+            }
+            pstmt.executeBatch();
+        }
+    }
+
+    public synchronized JSONArray getAllCollectionIds() throws SQLException {
+        JSONArray ids = new JSONArray();
+        String sql = "SELECT id FROM collections";
+        try (Statement stmt = connection.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                ids.put(rs.getLong("id"));
+            }
+        }
+        return ids;
+    }
+
+    public synchronized List<ObservationRecord> getCollectionMessages(long collectionId) throws SQLException {
+        List<ObservationRecord> records = new ArrayList<>();
+        String sql = "SELECT m.* FROM messages m " +
+                     "JOIN collection_messages cm ON m.id = cm.message_id" +
+                     "WHERE cm.collection_id = ?";
+        
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setLong(1, collectionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    JSONObject payloadJson = new JSONObject(rs.getString("payload"));
+                    long epochMilli = rs.getLong("time");
+                    ZonedDateTime utcTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.of("UTC"));
+                    records.add(new ObservationRecord(
+                        payloadJson,
+                        rs.getString("owner"),
+                        rs.getLong("id"),
+                        utcTime.format(formatter)
+                    ));
+                }
+            }
+        }
+        return records;
     }
 
     public synchronized boolean registerUser(User user) throws SQLException {

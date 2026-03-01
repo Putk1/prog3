@@ -154,6 +154,9 @@ public class Server implements HttpHandler {
             HttpContext context = server.createContext("/datarecord", new Server());
             context.setAuthenticator(auth);
 
+            HttpContext collectionsContext = server.createContext("/collections", new CollectionsHandler());
+            collectionsContext.setAuthenticator(auth);
+
             server.createContext("/registration", new RegistrationHandler(auth));
 
             server.setExecutor(Executors.newCachedThreadPool());
