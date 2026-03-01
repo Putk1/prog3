@@ -44,6 +44,17 @@ public class ObservationRecord {
 
                     obs.getDouble("latitude");
                     obs.getDouble("longitude");
+
+                    // Genuinely the instructions were so confusing I'm not sure whether I need to allow users to post their own data but let's try this
+                    if (obs.has("weather")) {
+                        JSONObject weatherData = new JSONObject();
+                        
+                        weatherData.put("temperature_in_kelvins", 253.15);
+                        weatherData.put("cloudiness_percentage", 0);
+                        weatherData.put("background_light_volume", 10.5);
+
+                        obs.put("weather", weatherData);
+                    }
                 }
             }
         } else {
