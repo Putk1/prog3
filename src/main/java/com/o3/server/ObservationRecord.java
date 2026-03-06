@@ -19,6 +19,9 @@ public class ObservationRecord {
 
     private JSONArray observatory;
 
+    private String updateReason;
+    private String editedTime;
+
     public ObservationRecord(JSONObject json, String nickname, long id, String timestamp) {
         this.targetBodyName = json.getString("target_body_name");
         this.centerBodyName = json.getString("center_body_name");
@@ -57,6 +60,16 @@ public class ObservationRecord {
                     }
                 }
             }
+
+            if (clientMetadata.has("update_reason")) {
+                this.updateReason = clientMetadata.getString("update_reason");
+            } else {
+                this.updateReason = "N/A";
+            }
+            if (clientMetadata.has("edited")) {
+                this.editedTime = clientMetadata.getString("edited");
+            }
+
         } else {
             throw new JSONException("Missing record_payload");
         }

@@ -132,6 +132,15 @@ public class MessageDatabase {
         return records;
     }
 
+    public synchronized void updateMessage(long id, String payload) throws SQLException {
+        String sql = "UPDATE messages SET payload = ? WHERE id = ?";
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setString(1, payload);
+            pstmt.setLong(2, id);
+            pstmt.executeUpdate();
+        }
+    }
+
     public synchronized boolean registerUser(User user) throws SQLException {
         String sql = "INSERT INTO users (username, password, email, nickname) VALUES (?, ?, ?, ?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {

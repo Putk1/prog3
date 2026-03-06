@@ -24,8 +24,10 @@ public class Server implements HttpHandler {
     public void handle(HttpExchange t) throws IOException {
         if ("POST".equals(t.getRequestMethod())) {
             handlePostRequest(t);
-        } else if ("GET".equals(t.getRequestMethod())) { 
+        } else if ("GET".equals(t.getRequestMethod())) {
             handleGetRequest(t);
+        } else if ("PUT".equals(t.getRequestMethod())) {
+            handlePutRequest(t);
         } else {
             handleResponse(t);
         }
@@ -109,6 +111,52 @@ public class Server implements HttpHandler {
 
     }
 
+    private void handlePutRequest(HttpExchange httpExchange) throws IOException {
+        try {
+            String query = httpExchange.getRequestURI().getQuery();
+            if (query == null || !query.startsWith("id=")) {
+                httpExchange.sendResponseHeaders(400, -1);
+                return;
+            }
+
+            long id;
+            try {
+                id = Long.parseLong(query.substring(3));
+            } catch (NumberFormatException e) {
+                httpExchange.sendResponseHeaders(400, -1);
+                return;
+            }
+
+            // User info
+            String username = httpExchange.getPrincipal().getUsername();
+            User user = MessageDatabase.getInstance().getUser(username);
+            String nickname = user.getNickname();
+
+            InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(), StandardCharsets.UTF_8);
+            BufferedReader br = new BufferedReader(isr);
+            String text = br.lines().collect(Collectors.joining("\n"));
+
+            JSONObject json = new JSONObject(text);
+
+            if (!json.has("orbital_elements") && !json.has("state_vector")) {
+                httpExchange.sendResponseHeaders(400, -1);
+                return;
+            }
+
+            new ObservationRecord(json, nickname, id, "");
+
+            MessageDatabase.getInstance().updateMessage(id, text);
+
+            httpExchange.sendResponseHeaders(200, -1);
+        } catch (Exception e) {
+            String response = "Invalid format for request";
+            byte[] responseBytes = response.getBytes(StandardCharsets.UTF_8);
+            httpExchange.sendResponseHeaders(400, responseBytes.length);
+            httpExchange.getResponseBody().write(responseBytes);
+        } finally {
+            httpExchange.getResponseBody().close();
+        }
+    }
 
     private static SSLContext myServerSSLContext(String keystorePath, String password) throws Exception{
         char[] passphrase = password.toCharArray();
