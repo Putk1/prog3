@@ -45,18 +45,18 @@ public class MessageDatabase {
     private void initializeDatabase() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
             // User table
-            stmt.executeUpdate("CREATE TABLE users (" +
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS users (" +
                 "username TEXT PRIMARY KEY, " +
                 "password TEXT NOT NULL, " +
                 "email TEXT, " +
                 "nickname TEXT)");
             
             // Messages table
-            stmt.executeUpdate("CREATE TABLE messages (" +
+            stmt.executeUpdate("CREATE TABLE IF NOT EXISTS messages (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                "owner TEXT, " +
-                "time INTEGER, " +
-                "payload TEXT)");
+                "owner TEXT NOT NULL, " +
+                "time INTEGER NOT NULL, " +
+                "payload TEXT NOT NULL)");
             
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS collections (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");

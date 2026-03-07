@@ -34,7 +34,6 @@ public class User {
     public JSONObject toJSON() {
         JSONObject obj = new JSONObject();
         obj.put("username", username);
-        obj.put("password", password);
         obj.put("email", email);
         obj.put("nickname", nickname);
         return obj;

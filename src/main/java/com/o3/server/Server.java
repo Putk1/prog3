@@ -192,6 +192,10 @@ public class Server implements HttpHandler {
                 return;
             }
             
+            mergedMetadata.remove("id");
+            mergedMetadata.remove("record_owner");
+            mergedMetadata.remove("record_time_received");
+
             String textToSave = existingJson.toString();
             
             if (explicitReason) {
