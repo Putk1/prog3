@@ -143,9 +143,13 @@ public class Server implements HttpHandler {
                 return;
             }
 
+            boolean explicitReason = false;
             JSONObject metadata;
             if (json.has("metadata")) {
                 metadata = json.getJSONObject("metadata");
+                if (metadata.has("update_reason")) {
+                    explicitReason = true;
+                }
             } else {
                 metadata = new JSONObject();
                 json.put("metadata", metadata);
@@ -168,6 +172,13 @@ public class Server implements HttpHandler {
             if (!existingRecord.getRecordOwner().equals(nickname)) {
                 httpExchange.sendResponseHeaders(403, -1);
                 return;
+            }
+
+            if (explicitReason) {
+                long newTime = java.time.Instant.now().toEpochMilli();
+                MessageDatabase.getInstance().updateMessageAndTime(id, text, newTime);
+            } else {
+                MessageDatabase.getInstance().updateMessage(id, text);
             }
             
             if (json.has("time")) {
