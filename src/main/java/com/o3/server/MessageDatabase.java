@@ -59,7 +59,7 @@ public class MessageDatabase {
                 "payload TEXT)");
             
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS collections (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT)");
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");
 
             stmt.executeUpdate("CREATE TABLE IF NOT EXISTS collection_messages (" +
                 "collection_id INTEGER, " +
@@ -130,6 +130,26 @@ public class MessageDatabase {
             }
         }
         return records;
+    }
+
+    public synchronized ObservationRecord getMessageById(long id) throws SQLException {
+        String sql = "SELECT * FROM messages WHERE id = ?";
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
+        
+        try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
+            pstmt.setLong(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    JSONObject payloadJson = new JSONObject(rs.getString("payload"));
+                    long epochMilli = rs.getLong("time");
+                    ZonedDateTime utcTime = ZonedDateTime.ofInstant(Instant.ofEpochMilli(epochMilli), ZoneId.of("UTC"));
+                    String isoTime = utcTime.format(formatter);
+                    
+                    return new ObservationRecord(payloadJson, rs.getString("owner"), rs.getLong("id"), isoTime);
+                }
+            }
+        }
+        return null;
     }
 
     public synchronized void updateMessage(long id, String payload) throws SQLException {

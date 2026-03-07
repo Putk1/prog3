@@ -125,6 +125,7 @@ public class ObservationRecord {
         metadata.put("record_time_received", recordTimeReceived);
         metadata.put("record_owner", recordOwner);
         metadata.put("id", id);
+
         if (recordPayload != null) {
             metadata.put("record_payload", recordPayload);
         }
@@ -133,8 +134,16 @@ public class ObservationRecord {
             metadata.put("observatory", observatory);
         }
 
+        if (updateReason != null) {
+            metadata.put("update_reason", updateReason);
+        }
+
         json.put("metadata", metadata);
 
         return json;
+    }
+
+    public String getRecordOwner() {
+        return this.recordOwner;
     }
 }

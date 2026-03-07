@@ -145,6 +145,17 @@ public class Server implements HttpHandler {
 
             new ObservationRecord(json, nickname, id, "");
 
+            ObservationRecord existingRecord = MessageDatabase.getInstance().getMessageById(id);
+            if (existingRecord == null) {
+                httpExchange.sendResponseHeaders(404, -1);
+                return;
+            }
+
+            if (!existingRecord.getRecordOwner().equals(nickname)) {
+                httpExchange.sendResponseHeaders(403, -1);
+                return;
+            }
+
             MessageDatabase.getInstance().updateMessage(id, text);
 
             httpExchange.sendResponseHeaders(200, -1);
