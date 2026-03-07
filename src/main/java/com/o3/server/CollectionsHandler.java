@@ -39,25 +39,23 @@ public class CollectionsHandler implements HttpHandler {
                 if (path.equals("/collections/create")) {
 
                     String trimmedBody = body.trim();
-                    JSONObject json;
+                    JSONArray messageIds;
 
                     if (trimmedBody.isEmpty()) {
-                        json = new JSONObject(); 
+                        messageIds = new JSONArray(); 
                     } else {
-                        json = new JSONObject(body); 
+                        messageIds = new JSONArray(trimmedBody); 
                     }
 
-                    String name = json.optString("name", "Unnamed Collection");
-                    long newCollectionId = MessageDatabase.getInstance().createCollection(name);
+                    long newCollectionId = MessageDatabase.getInstance().createCollection("Unnamed Collection");
                     
-                    if (json.has("message_ids")) {
-                        JSONArray messageIds = json.getJSONArray("message_ids");
+                    if (messageIds.length() > 0) {
                         MessageDatabase.getInstance().addMessagesToCollection(newCollectionId, messageIds);
                     }
 
-                JSONObject response = new JSONObject();
-                response.put("created_collection_id", newCollectionId);
-                sendJsonResponse(t, 200, response.toString());
+                    JSONObject response = new JSONObject();
+                    response.put("created_collection_id", newCollectionId);
+                    sendJsonResponse(t, 200, response.toString());
                 
                 } else if (path.equals("/collections/add")) {
                     JSONObject json = new JSONObject(body);
