@@ -1,14 +1,18 @@
 package com.o3.server;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-import org.json.JSONArray;
-import org.json.JSONObject;
-
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
 
 public class CollectionsHandler implements HttpHandler {
 
@@ -19,37 +23,47 @@ public class CollectionsHandler implements HttpHandler {
 
         try {
             if ("GET".equalsIgnoreCase(method)) {
-                if (path.equals("/collections")) {
+                if (path.equals("/collections") || path.equals("/collections/")) {
                     JSONArray ids = MessageDatabase.getInstance().getAllCollectionIds();
                     sendJsonResponse(t, 200, ids.toString());
                 } else {
-                    String idStr = path.substring(path.lastIndexOf('/') + 1);
-                    long collectionId = Long.parseLong(idStr);
-                    
-                    List<ObservationRecord> records = MessageDatabase.getInstance().getCollectionMessages(collectionId);
-                    JSONArray responseArray = new JSONArray();
-                    for (ObservationRecord record : records) {
-                        responseArray.put(record.toJSON());
+                    String[] parts = path.split("/");
+                    if (parts.length >= 3) {
+                        long collectionId = Long.parseLong(parts[2]);
+                        List<ObservationRecord> records = MessageDatabase.getInstance().getCollectionMessages(collectionId);
+                        JSONArray responseArray = new JSONArray();
+                        for (ObservationRecord record : records) {
+                            responseArray.put(record.toJSON());
+                        }
+                        sendJsonResponse(t, 200, responseArray.toString());
+                    } else {
+                        sendJsonResponse(t, 404, "{\"error\": \"Not Found\"}");
                     }
-                    sendJsonResponse(t, 200, responseArray.toString());
                 }
             } else if ("POST".equalsIgnoreCase(method)) {
                 String body = readBody(t);
+                String trimmedBody = body.trim();
                 
-                if (path.equals("/collections/create")) {
+                if (path.equals("/collections/create") || path.equals("/collections")) {
 
-                    String trimmedBody = body.trim();
-                    JSONArray messageIds;
+                    String name = "Unnamed Collection";
+                    JSONArray messageIds = null;
 
-                    if (trimmedBody.isEmpty()) {
-                        messageIds = new JSONArray(); 
-                    } else {
-                        messageIds = new JSONArray(trimmedBody); 
+                    if (!trimmedBody.isEmpty()) {
+                        if (trimmedBody.startsWith("[")) {
+                            messageIds = new JSONArray(trimmedBody); 
+                        } else if (trimmedBody.startsWith("{")) {
+                            JSONObject json = new JSONObject(trimmedBody);
+                            name = json.optString("name", "Unnamed Collection");
+                            if (json.has("message_ids")) {
+                                messageIds = json.getJSONArray("message_ids");
+                            }
+                        }
                     }
 
-                    long newCollectionId = MessageDatabase.getInstance().createCollection("Unnamed Collection");
+                    long newCollectionId = MessageDatabase.getInstance().createCollection(name);
                     
-                    if (messageIds.length() > 0) {
+                    if (messageIds != null && messageIds.length() > 0) {
                         MessageDatabase.getInstance().addMessagesToCollection(newCollectionId, messageIds);
                     }
 
@@ -58,7 +72,7 @@ public class CollectionsHandler implements HttpHandler {
                     sendJsonResponse(t, 200, response.toString());
                 
                 } else if (path.equals("/collections/add")) {
-                    JSONObject json = new JSONObject(body);
+                    JSONObject json = new JSONObject(trimmedBody);
                     long collectionId = json.getLong("collection_id");
                     JSONArray messageIds = json.getJSONArray("message_ids");
                     
