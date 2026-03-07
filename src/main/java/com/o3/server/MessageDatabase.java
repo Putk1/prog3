@@ -153,11 +153,12 @@ public class MessageDatabase {
         return null;
     }
 
-    public synchronized void updateMessage(long id, String payload) throws SQLException {
-        String sql = "UPDATE messages SET payload = ? WHERE id = ?";
+    public synchronized void updateMessage(long id, String payload, long time) throws SQLException {
+        String sql = "UPDATE messages SET payload = ?, time = ? WHERE id = ?";
         try (PreparedStatement pstmt = connection.prepareStatement(sql)) {
             pstmt.setString(1, payload);
-            pstmt.setLong(2, id);
+            pstmt.setLong(2, time);
+            pstmt.setLong(3, id);
             pstmt.executeUpdate();
         }
     }

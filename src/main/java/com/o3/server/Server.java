@@ -150,7 +150,7 @@ public class Server implements HttpHandler {
                 metadata = new JSONObject();
                 json.put("metadata", metadata);
             }
-            
+
             if (!metadata.has("update_reason")) {
                 metadata.put("update_reason", "N/A");
             }
@@ -169,8 +169,8 @@ public class Server implements HttpHandler {
                 httpExchange.sendResponseHeaders(403, -1);
                 return;
             }
-
-            MessageDatabase.getInstance().updateMessage(id, text);
+            long updateTime = java.time.Instant.now().toEpochMilli();
+            MessageDatabase.getInstance().updateMessage(id, text, updateTime);
 
             httpExchange.sendResponseHeaders(200, -1);
         } catch (Exception e) {
