@@ -135,33 +135,7 @@ public class Server implements HttpHandler {
             InputStreamReader isr = new InputStreamReader(httpExchange.getRequestBody(), StandardCharsets.UTF_8);
             BufferedReader br = new BufferedReader(isr);
             String text = br.lines().collect(Collectors.joining("\n"));
-
             JSONObject json = new JSONObject(text);
-
-            if (!json.has("orbital_elements") && !json.has("state_vector")) {
-                httpExchange.sendResponseHeaders(400, -1);
-                return;
-            }
-
-            boolean explicitReason = false;
-            JSONObject metadata;
-            if (json.has("metadata")) {
-                metadata = json.getJSONObject("metadata");
-                if (metadata.has("update_reason")) {
-                    explicitReason = true;
-                }
-            } else {
-                metadata = new JSONObject();
-                json.put("metadata", metadata);
-            }
-
-            if (!metadata.has("update_reason")) {
-                metadata.put("update_reason", "N/A");
-            }
-
-            text = json.toString();
-
-            new ObservationRecord(json, nickname, id, "");
 
             ObservationRecord existingRecord = MessageDatabase.getInstance().getMessageById(id);
             if (existingRecord == null) {
@@ -174,12 +148,43 @@ public class Server implements HttpHandler {
                 return;
             }
 
-            if (explicitReason) {
-                long newTime = java.time.Instant.now().toEpochMilli();
-                MessageDatabase.getInstance().updateMessageAndTime(id, text, newTime);
-            } else {
-                MessageDatabase.getInstance().updateMessage(id, text);
+            JSONObject existingJson = existingRecord.toJSON();
+
+
+            for (String key : json.keySet()) {
+                if (key.equals("metadata")) {
+                    JSONObject incomingMetadata = json.getJSONObject("metadata");
+
+                    JSONObject existingMetadata;
+                    if (existingJson.has("metadata")) {
+                        existingMetadata = existingJson.getJSONObject("metadata");
+                    } else {
+                        existingMetadata = new JSONObject();
+                    }
+
+                    for (String metaKey : incomingMetadata.keySet()) {
+                        existingMetadata.put(metaKey, incomingMetadata.get(metaKey));
+                    }
+
+                    existingJson.put("metadata", existingMetadata);
+                } else {
+                    existingJson.put(key, json.get(key));
+                }
             }
+
+            JSONObject mergedMetadata = existingJson.getJSONObject("metadata");
+            if (!mergedMetadata.has("update_reason")) {
+                mergedMetadata.put("update_reason", "N/A");
+            }
+
+            try {
+                new ObservationRecord(existingJson, nickname, id, "");
+            } catch (Exception e) {
+                httpExchange.sendResponseHeaders(400, -1);
+                return;
+            }
+            
+            String textToSave = existingJson.toString();
             
             if (json.has("time")) {
                 long newTime;
@@ -191,9 +196,9 @@ public class Server implements HttpHandler {
                     newTime = ((Number) timeObj).longValue();
                 }
 
-                MessageDatabase.getInstance().updateMessageAndTime(id, text, newTime);
+                MessageDatabase.getInstance().updateMessageAndTime(id, textToSave, newTime);
             } else {
-                MessageDatabase.getInstance().updateMessage(id, text);
+                MessageDatabase.getInstance().updateMessage(id, textToSave);
             }
 
             httpExchange.sendResponseHeaders(200, -1);

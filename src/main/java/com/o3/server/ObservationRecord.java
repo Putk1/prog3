@@ -130,6 +130,10 @@ public class ObservationRecord {
             metadata.put("update_reason", updateReason);
         }
 
+        if (editedTime != null) {
+            metadata.put("edited", editedTime);
+        }
+
         json.put("metadata", metadata);
 
         return json;
