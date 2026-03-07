@@ -177,6 +177,14 @@ public class Server implements HttpHandler {
                 mergedMetadata.put("update_reason", "N/A");
             }
 
+            boolean explicitReason = json.has("metadata") && json.getJSONObject("metadata").has("update_reason");
+
+            if (explicitReason) {
+                String isoTime = java.time.ZonedDateTime.now(java.time.ZoneId.of("UTC"))
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX"));
+                mergedMetadata.put("edited", isoTime);
+            }
+
             try {
                 new ObservationRecord(existingJson, nickname, id, "");
             } catch (Exception e) {
@@ -186,7 +194,10 @@ public class Server implements HttpHandler {
             
             String textToSave = existingJson.toString();
             
-            if (json.has("time")) {
+            if (explicitReason) {
+                long newTime = java.time.Instant.now().toEpochMilli();
+                MessageDatabase.getInstance().updateMessageAndTime(id, textToSave, newTime);
+            } else if (json.has("time")) {
                 long newTime;
                 Object timeObj = json.get("time");
 
@@ -195,7 +206,6 @@ public class Server implements HttpHandler {
                 } else {
                     newTime = ((Number) timeObj).longValue();
                 }
-
                 MessageDatabase.getInstance().updateMessageAndTime(id, textToSave, newTime);
             } else {
                 MessageDatabase.getInstance().updateMessage(id, textToSave);
