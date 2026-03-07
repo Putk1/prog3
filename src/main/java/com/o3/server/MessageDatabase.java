@@ -69,9 +69,10 @@ public class MessageDatabase {
         }
     }
 
-    public synchronized long createCollection() throws SQLException {
-        String sql = "INSERT INTO collections DEFAULT VALUES";
+    public synchronized long createCollection(String name) throws SQLException {
+        String sql = "INSERT INTO collections (name) VALUES (?)";
         try (PreparedStatement pstmt = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, name);
             pstmt.executeUpdate();
             try (ResultSet rs = pstmt.getGeneratedKeys()) {
                 if (rs.next()) {
@@ -79,7 +80,7 @@ public class MessageDatabase {
                 }
             }
         }
-        return -1;
+        throw new SQLException("Failed to create a collection");
     }
 
     public synchronized void addMessagesToCollection(long collectionId, JSONArray messageIds) throws SQLException {
@@ -108,7 +109,7 @@ public class MessageDatabase {
     public synchronized List<ObservationRecord> getCollectionMessages(long collectionId) throws SQLException {
         List<ObservationRecord> records = new ArrayList<>();
         String sql = "SELECT m.* FROM messages m " +
-                     "JOIN collection_messages cm ON m.id = cm.message_id" +
+                     "JOIN collection_messages cm ON m.id = cm.message_id " +
                      "WHERE cm.collection_id = ?";
         
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSX");
