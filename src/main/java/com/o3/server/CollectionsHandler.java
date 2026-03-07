@@ -36,7 +36,7 @@ public class CollectionsHandler implements HttpHandler {
             } else if ("POST".equalsIgnoreCase(method)) {
                 String body = readBody(t);
                 
-                if (path.equals("/collections")) {
+                if (path.equals("/collections/create")) {
 
                     String trimmedBody = body.trim();
                     JSONObject json;
@@ -66,6 +66,8 @@ public class CollectionsHandler implements HttpHandler {
                     
                     MessageDatabase.getInstance().addMessagesToCollection(collectionId, messageIds);
                     sendJsonResponse(t, 200, "{}");
+                } else {
+                    sendJsonResponse(t, 404, "{\"error\": \"Path not found\"}");
                 }
             } else {
                 sendJsonResponse(t, 400, "{\"error\": \"Method not supported\"}");
