@@ -94,21 +94,6 @@ public class Server implements HttpHandler {
                 return;
             }
 
-            JSONObject metadata;
-            if (json.has("metadata")) {
-                metadata = json.getJSONObject("metadata");
-            } else {
-                metadata = new JSONObject();
-                json.put("metadata", metadata);
-            }
-
-            if (!metadata.has("update_reason")) {
-                metadata.put("update_reason", "N/A");
-            }
-
-            text = json.toString();
-
-
             new ObservationRecord(json, nickname, 0, "");
 
             MessageDatabase.getInstance().storeMessage(nickname, epochMilli, text);
@@ -157,6 +142,20 @@ public class Server implements HttpHandler {
                 httpExchange.sendResponseHeaders(400, -1);
                 return;
             }
+
+            JSONObject metadata;
+            if (json.has("metadata")) {
+                metadata = json.getJSONObject("metadata");
+            } else {
+                metadata = new JSONObject();
+                json.put("metadata", metadata);
+            }
+            
+            if (!metadata.has("update_reason")) {
+                metadata.put("update_reason", "N/A");
+            }
+
+            text = json.toString();
 
             new ObservationRecord(json, nickname, id, "");
 
