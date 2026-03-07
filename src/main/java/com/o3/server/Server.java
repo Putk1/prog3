@@ -169,8 +169,21 @@ public class Server implements HttpHandler {
                 httpExchange.sendResponseHeaders(403, -1);
                 return;
             }
-            long updateTime = java.time.Instant.now().toEpochMilli();
-            MessageDatabase.getInstance().updateMessage(id, text, updateTime);
+            
+            if (json.has("time")) {
+                long newTime;
+                Object timeObj = json.get("time");
+
+                if (timeObj instanceof String) {
+                    newTime = java.time.ZonedDateTime.parse((String) timeObj).toInstant().toEpochMilli();
+                } else {
+                    newTime = ((Number) timeObj).longValue();
+                }
+
+                MessageDatabase.getInstance().updateMessageAndTime(id, text, newTime);
+            } else {
+                MessageDatabase.getInstance().updateMessage(id, text);
+            }
 
             httpExchange.sendResponseHeaders(200, -1);
         } catch (Exception e) {
